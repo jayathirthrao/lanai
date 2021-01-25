@@ -323,6 +323,10 @@ void MTLRenderQueue_CheckPreviousOp(jint op) {
         MTLVertexCache_EnableMaskCache(mtlc, dstOps);
         mtlPreviousOp = op;
         return;
+    } else if (op == MTL_OP_GLYPH_CACHE) {
+        MTLTR_EnableGlyphVertexCache(mtlc, dstOps);
+        mtlPreviousOp = op;
+        return;
     }
 
     J2dTraceLn1(J2D_TRACE_VERBOSE,
@@ -334,6 +338,9 @@ void MTLRenderQueue_CheckPreviousOp(jint op) {
             return;
         case MTL_OP_MASK_OP :
             MTLVertexCache_DisableMaskCache(mtlc);
+            break;
+        case MTL_OP_GLYPH_CACHE :
+            MTLTR_DisableGlyphVertexCache(mtlc);
             break;
     }
 
@@ -613,7 +620,7 @@ Java_sun_java2d_metal_MTLRenderQueue_flushBuffer
                 // text-related ops
                 case sun_java2d_pipe_BufferedOpCodes_DRAW_GLYPH_LIST:
                 {
-                    CHECK_PREVIOUS_OP(MTL_OP_OTHER);
+                    //CHECK_PREVIOUS_OP(MTL_OP_OTHER);
 
                     if ([mtlc useXORComposite]) {
                         commitEncodedCommands();
@@ -1151,6 +1158,8 @@ Java_sun_java2d_metal_MTLRenderQueue_flushBuffer
         if (mtlc != NULL) {
             if (mtlPreviousOp == MTL_OP_MASK_OP) {
                 MTLVertexCache_DisableMaskCache(mtlc);
+            } else if (mtlPreviousOp == MTL_OP_GLYPH_CACHE) {
+                MTLTR_DisableGlyphVertexCache(mtlc);
             }
             [mtlc.encoderManager endEncoder];
             MTLCommandBufferWrapper * cbwrapper = [mtlc pullCommandBufferWrapper];

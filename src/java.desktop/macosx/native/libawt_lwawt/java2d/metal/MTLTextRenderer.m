@@ -453,10 +453,9 @@ MTLTR_DrawGrayscaleGlyphViaCache(MTLContext *mtlc,
             [mtlc.encoderManager endEncoder];
             lcdCacheEncoder = nil;
         }
-        MTLTR_EnableGlyphVertexCache(mtlc, dstOps);
+        CHECK_PREVIOUS_OP(MTL_OP_GLYPH_CACHE);
         glyphMode = MODE_USE_CACHE_GRAY;
     }
-
     if (ginfo->cellInfo == NULL) {
         // attempt to add glyph to accelerated glyph cache
         MTLTR_AddToGlyphCache(ginfo, mtlc, JNI_FALSE);
@@ -496,10 +495,8 @@ MTLTR_DrawLCDGlyphViaCache(MTLContext *mtlc, BMTLSDOps *dstOps,
     if (glyphMode != MODE_USE_CACHE_LCD) {
         if (glyphMode == MODE_NO_CACHE_GRAY) {
             MTLVertexCache_DisableMaskCache(mtlc);
-        } else if (glyphMode == MODE_USE_CACHE_GRAY) {
-            MTLTR_DisableGlyphVertexCache(mtlc);
         }
-
+        CHECK_PREVIOUS_OP(MTL_OP_OTHER);
         if (glyphCacheLCD == NULL) {
             if (!MTLTR_InitGlyphCache(mtlc, JNI_TRUE)) {
                 return JNI_FALSE;
@@ -566,12 +563,11 @@ MTLTR_DrawGrayscaleGlyphNoCache(MTLContext *mtlc,
 
     J2dTraceLn(J2D_TRACE_INFO, "MTLTR_DrawGrayscaleGlyphNoCache");
     if (glyphMode != MODE_NO_CACHE_GRAY) {
-        if (glyphMode == MODE_USE_CACHE_GRAY) {
-            MTLTR_DisableGlyphVertexCache(mtlc);
-        } else if (glyphMode == MODE_USE_CACHE_LCD) {
+        if (glyphMode == MODE_USE_CACHE_LCD) {
             [mtlc.encoderManager endEncoder];
             lcdCacheEncoder = nil;
         }
+        CHECK_PREVIOUS_OP(MTL_OP_OTHER);
         MTLVertexCache_EnableMaskCache(mtlc, dstOps);
         glyphMode = MODE_NO_CACHE_GRAY;
     }
@@ -628,13 +624,11 @@ MTLTR_DrawLCDGlyphNoCache(MTLContext *mtlc, BMTLSDOps *dstOps,
     if (glyphMode != MODE_NO_CACHE_LCD) {
         if (glyphMode == MODE_NO_CACHE_GRAY) {
             MTLVertexCache_DisableMaskCache(mtlc);
-        } else if (glyphMode == MODE_USE_CACHE_GRAY) {
-            MTLTR_DisableGlyphVertexCache(mtlc);
         } else if (glyphMode == MODE_USE_CACHE_LCD) {
             [mtlc.encoderManager endEncoder];
             lcdCacheEncoder = nil;
         }
-
+        CHECK_PREVIOUS_OP(MTL_OP_OTHER);
         if (blitTexture == nil) {
             J2dTraceLn(J2D_TRACE_ERROR, "can't obtain temporary texture object from pool");
             return JNI_FALSE;
@@ -827,15 +821,8 @@ MTLTR_DrawGlyphList(JNIEnv *env, MTLContext *mtlc, BMTLSDOps *dstOps,
             break;
         }
     }
-    /*
-     * Only in case of grayscale text drawing we need to flush
-     * cache. Still in case of LCD we are not using any intermediate
-     * cache.
-     */
     if (glyphMode == MODE_NO_CACHE_GRAY) {
         MTLVertexCache_DisableMaskCache(mtlc);
-    } else if (glyphMode == MODE_USE_CACHE_GRAY) {
-        MTLTR_DisableGlyphVertexCache(mtlc);
     } else if (glyphMode == MODE_USE_CACHE_LCD) {
         [mtlc.encoderManager endEncoder];
         lcdCacheEncoder = nil;

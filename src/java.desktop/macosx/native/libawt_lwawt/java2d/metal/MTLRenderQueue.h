@@ -51,6 +51,7 @@ enum {
   MTL_OP_SYNC,
   MTL_OP_SHAPE_CLIP_SPANS,
   MTL_OP_MASK_OP,
+  MTL_OP_GLYPH_CACHE,
   MTL_OP_OTHER
 };
 /*
@@ -91,6 +92,7 @@ enum {
 MTLContext *MTLRenderQueue_GetCurrentContext();
 BMTLSDOps *MTLRenderQueue_GetCurrentDestination();
 void commitEncodedCommands();
+void MTLRenderQueue_CheckPreviousOp(jint op);
 
 extern jint mtlPreviousOp;
 
