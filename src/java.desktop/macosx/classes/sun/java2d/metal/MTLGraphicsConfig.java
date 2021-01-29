@@ -41,15 +41,29 @@ import sun.java2d.pipe.hw.ContextCapabilities;
 import sun.lwawt.LWComponentPeer;
 import sun.lwawt.macosx.CFRetainedResource;
 
-import java.awt.*;
+import java.awt.AWTException;
+import java.awt.BufferCapabilities;
+import java.awt.Component;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.ImageCapabilities;
+import java.awt.Rectangle;
+import java.awt.Transparency;
+
 import java.awt.color.ColorSpace;
-import java.awt.image.*;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.DataBuffer;
+import java.awt.image.DirectColorModel;
+import java.awt.image.VolatileImage;
+import java.awt.image.WritableRaster;
 import java.io.File;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import static sun.java2d.metal.MTLContext.MTLContextCaps.CAPS_EXT_GRAD_SHADER;
-import static sun.java2d.opengl.OGLSurfaceData.TEXTURE;
+import static sun.java2d.pipe.hw.AccelSurface.TEXTURE;
 import static sun.java2d.pipe.hw.AccelSurface.RT_TEXTURE;
 import static sun.java2d.pipe.hw.ContextCapabilities.*;
 
@@ -58,9 +72,6 @@ import static sun.java2d.metal.MTLContext.MTLContextCaps.CAPS_EXT_BIOP_SHADER;
 public final class MTLGraphicsConfig extends CGraphicsConfig
         implements AccelGraphicsConfig, SurfaceManager.ProxiedGraphicsConfig
 {
-    //private static final int kOpenGLSwapInterval =
-    // RuntimeOptions.getCurrentOptions().OpenGLSwapInterval;
-    private static final int kMetalSwapInterval = 0; // TODO
     private static boolean mtlAvailable;
     private static ImageCapabilities imageCaps = new MTLImageCaps();
 
@@ -70,7 +81,6 @@ public final class MTLGraphicsConfig extends CGraphicsConfig
                             "lib" + File.separator + "shaders.metallib");
 
 
-    private int pixfmt;
     private BufferCapabilities bufferCaps;
     private long pConfigInfo;
     private ContextCapabilities mtlCaps;
@@ -78,7 +88,8 @@ public final class MTLGraphicsConfig extends CGraphicsConfig
     private final Object disposerReferent = new Object();
     private final int maxTextureSize;
 
-    private static native boolean initMTL();
+    private static native boolean isMetalFrameworkAvailable();
+    private static native boolean tryLoadMetalLibrary(int displayID, String shaderLib);
     private static native long getMTLConfigInfo(int displayID, String mtlShadersLib);
 
     /**
@@ -88,15 +99,14 @@ public final class MTLGraphicsConfig extends CGraphicsConfig
     private static native int nativeGetMaxTextureSize();
 
     static {
-        mtlAvailable = initMTL();
+        mtlAvailable = isMetalFrameworkAvailable();
     }
 
-    private MTLGraphicsConfig(CGraphicsDevice device, int pixfmt,
+    private MTLGraphicsConfig(CGraphicsDevice device,
                               long configInfo, int maxTextureSize,
                               ContextCapabilities mtlCaps) {
         super(device);
 
-        this.pixfmt = pixfmt;
         this.pConfigInfo = configInfo;
         this.mtlCaps = mtlCaps;
         this.maxTextureSize = maxTextureSize;
@@ -120,15 +130,18 @@ public final class MTLGraphicsConfig extends CGraphicsConfig
     }
 
     public static MTLGraphicsConfig getConfig(CGraphicsDevice device,
-                                              int displayID, int pixfmt)
+                                              int displayID)
     {
         if (!mtlAvailable) {
             return null;
         }
 
+        if (!tryLoadMetalLibrary(displayID, mtlShadersLib)) {
+            return null;
+        }
+
         long cfginfo = 0;
         int textureSize = 0;
-        final String[] ids = new String[1];
         MTLRenderQueue rq = MTLRenderQueue.getInstance();
         rq.lock();
         try {
@@ -144,9 +157,6 @@ public final class MTLGraphicsConfig extends CGraphicsConfig
                 // Explicitly not support a texture more than 2^14, see 8010999.
                 textureSize = textureSize <= 16384 ? textureSize / 2 : 8192;
                 MTLContext.setScratchSurface(cfginfo);
-                rq.flushAndInvokeNow(() -> {
-                    ids[0] = MTLContext.getMTLIdString();
-                });
             }
         } finally {
             rq.unlock();
@@ -160,8 +170,12 @@ public final class MTLGraphicsConfig extends CGraphicsConfig
                         CAPS_RT_TEXTURE_ALPHA | CAPS_RT_TEXTURE_OPAQUE |
                         CAPS_MULTITEXTURE | CAPS_TEXNONPOW2 | CAPS_TEXNONSQUARE |
                         CAPS_EXT_BIOP_SHADER | CAPS_EXT_GRAD_SHADER,
-                ids[0]);
-        return new MTLGraphicsConfig(device, pixfmt, cfginfo, textureSize, caps);
+                null);
+        return new MTLGraphicsConfig(device, cfginfo, textureSize, caps);
+    }
+
+    public static boolean isMetalAvailable() {
+        return mtlAvailable;
     }
 
     /**
@@ -250,8 +264,7 @@ public final class MTLGraphicsConfig extends CGraphicsConfig
 
     @Override
     public String toString() {
-        return ("MTLGraphicsConfig[" + getDevice().getIDstring() +
-                ",pixfmt="+pixfmt+"]");
+        return ("MTLGraphicsConfig[" + getDevice().getIDstring() + "]");
     }
 
     @Override
@@ -363,7 +376,8 @@ public final class MTLGraphicsConfig extends CGraphicsConfig
     public VolatileImage createCompatibleVolatileImage(int width, int height,
                                                        int transparency,
                                                        int type) {
-        if (type != RT_TEXTURE && type != TEXTURE) {
+        if ((type != RT_TEXTURE && type != TEXTURE) ||
+            transparency == Transparency.BITMASK) {
             return null;
         }
 

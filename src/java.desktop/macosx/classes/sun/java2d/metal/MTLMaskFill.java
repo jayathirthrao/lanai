@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ import sun.java2d.loops.GraphicsPrimitiveMgr;
 import sun.java2d.loops.SurfaceType;
 import sun.java2d.pipe.BufferedMaskFill;
 
-import java.awt.*;
+import java.awt.Composite;
 
 import static sun.java2d.loops.CompositeType.SrcNoEa;
 import static sun.java2d.loops.CompositeType.SrcOver;

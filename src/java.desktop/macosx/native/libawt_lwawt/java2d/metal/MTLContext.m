@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -113,7 +113,7 @@ MTLTransform* tempTransform = nil;
 }
 
 @synthesize textureFunction,
-            vertexCacheEnabled, aaEnabled, device, library, pipelineStateStorage,
+            vertexCacheEnabled, aaEnabled, device, pipelineStateStorage,
             commandQueue, blitCommandQueue, vertexBuffer,
             texturePool, paint=_paint;
 
@@ -124,20 +124,18 @@ extern void initSamplers(id<MTLDevice> device);
     if (self) {
         // Initialization code here.
         device = d;
-        texturePool = [[MTLTexturePool alloc] initWithDevice:device];
+
         pipelineStateStorage = [[MTLPipelineStatesStorage alloc] initWithDevice:device shaderLibPath:shadersLib];
+        if (pipelineStateStorage == nil) {
+            J2dRlsTraceLn(J2D_TRACE_ERROR, "MTLContext.initWithDevice(): Failed to initialize MTLPipelineStatesStorage.");
+            return nil;
+        }
+
+        texturePool = [[MTLTexturePool alloc] initWithDevice:device];
 
         vertexBuffer = [device newBufferWithBytes:verts
                                            length:sizeof(verts)
                                           options:MTLResourceCPUCacheModeDefaultCache];
-
-        NSError *error = nil;
-
-        library = [device newLibraryWithFile:shadersLib error:&error];
-        if (!library) {
-            NSLog(@"Failed to load library. error %@", error);
-            exit(0);
-        }
 
         _encoderManager = [[EncoderManager alloc] init];
         [_encoderManager setContext:self];
@@ -164,7 +162,6 @@ extern void initSamplers(id<MTLDevice> device);
     J2dTraceLn(J2D_TRACE_INFO, "MTLContext.dealloc");
 
     self.texturePool = nil;
-    self.library = nil;
     self.vertexBuffer = nil;
     self.commandQueue = nil;
     self.blitCommandQueue = nil;
@@ -453,21 +450,5 @@ extern void initSamplers(id<MTLDevice> device);
 }
 
 @end
-
-/*
- * Class:     sun_java2d_metal_MTLContext
- * Method:    getMTLIdString
- * Signature: ()Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_sun_java2d_metal_MTLContext_getMTLIdString
-  (JNIEnv *env, jclass mtlcc)
-{
-    char *vendor, *renderer, *version;
-    char *pAdapterId;
-    jobject ret = NULL;
-    int len;
-
-    return NULL;
-}
 
 #endif /* !HEADLESS */

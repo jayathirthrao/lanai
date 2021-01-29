@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,8 @@ import sun.java2d.SurfaceData;
 import sun.java2d.SurfaceDataProxy;
 import sun.java2d.loops.CompositeType;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Transparency;
 
 /**
  * The proxy class contains the logic for when to replace a

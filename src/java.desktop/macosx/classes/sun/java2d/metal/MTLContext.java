@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,8 @@ import sun.java2d.pipe.hw.ContextCapabilities;
 
 import java.lang.annotation.Native;
 
-import static sun.java2d.pipe.BufferedOpCodes.*;
+import static sun.java2d.pipe.BufferedOpCodes.INVALIDATE_CONTEXT;
+import static sun.java2d.pipe.BufferedOpCodes.SET_SCRATCH_SURFACE;
 
 /**
  * Note that the RenderQueue lock must be acquired before calling any of
@@ -103,14 +104,6 @@ final class MTLContext extends BufferedContext {
         rq.getBuffer().putInt(INVALIDATE_CONTEXT);
         rq.flushNow();
     }
-
-    /**
-     * Returns a string representing adapter id (vendor, renderer, version).
-     * Must be called on the rendering thread.
-     *
-     * @return an id string for the adapter
-     */
-    public static final native String getMTLIdString();
 
     public static class MTLContextCaps extends ContextCapabilities {
         /**

@@ -39,7 +39,6 @@
 
 // keyboard layout
 static NSString *kbdLayout;
-jboolean metalEnabled = JNI_FALSE;
 
 @interface AWTView()
 @property (retain) CDropTarget *_dropTarget;
@@ -56,9 +55,6 @@ jboolean metalEnabled = JNI_FALSE;
 //#define IM_DEBUG TRUE
 //#define EXTRA_DEBUG
 
-// Uncomment this line to see Metal specific fprintfs
-//#define METAL_DEBUG
-
 static BOOL shouldUsePressAndHold() {
     return YES;
 }
@@ -69,7 +65,6 @@ static BOOL shouldUsePressAndHold() {
 @synthesize _dragSource;
 @synthesize cglLayer;
 @synthesize mouseIsOver;
-
 
 // Note: Must be called on main (AppKit) thread only
 - (id) initWithRect: (NSRect) rect
@@ -122,7 +117,7 @@ static BOOL shouldUsePressAndHold() {
     {
         JNIEnv *env = [ThreadUtilities getJNIEnvUncached];
 
-        JNFDeleteGlobalRef(env, fInputMethodLOCKABLE);
+        (*env)->DeleteGlobalRef(env, fInputMethodLOCKABLE);
         fInputMethodLOCKABLE = NULL;
     }
 
@@ -1364,14 +1359,10 @@ static jclass jc_CInputMethod = NULL;
 
     // Get rid of the old one
     if (fInputMethodLOCKABLE) {
-        JNFDeleteGlobalRef(env, fInputMethodLOCKABLE);
+        (*env)->DeleteGlobalRef(env, fInputMethodLOCKABLE);
     }
 
-    // Save a global ref to the new input method.
-    if (inputMethod != NULL)
-        fInputMethodLOCKABLE = JNFNewGlobalRef(env, inputMethod);
-    else
-        fInputMethodLOCKABLE = NULL;
+    fInputMethodLOCKABLE = inputMethod; // input method arg must be a GlobalRef
 
     NSTextInputContext *curContxt = [NSTextInputContext currentInputContext];
     kbdLayout = curContxt.selectedKeyboardInputSource;
@@ -1413,6 +1404,7 @@ Java_sun_lwawt_macosx_CPlatformView_nativeCreateView
 
     NSRect rect = NSMakeRect(originX, originY, width, height);
     jobject cPlatformView = (*env)->NewWeakGlobalRef(env, obj);
+    CHECK_EXCEPTION();
 
     [ThreadUtilities performOnMainThreadWaiting:YES block:^(){
 
@@ -1538,20 +1530,4 @@ JNIEXPORT jboolean JNICALL Java_sun_lwawt_macosx_CPlatformView_nativeIsViewUnder
     JNI_COCOA_EXIT(env);
 
     return underMouse;
-}
-
-jboolean GetStaticBoolean(JNIEnv *env, jclass fClass, const char *fieldName)
-{
-    jfieldID fieldID = (*env)->GetStaticFieldID(env, fClass, fieldName, "Z");
-    return (*env)->GetStaticBooleanField(env, fClass, fieldID);
-}
-
-JNIEXPORT void JNICALL
-Java_sun_java2d_macos_MacOSFlags_initNativeFlags(JNIEnv *env,
-                                                     jclass flagsClass)
-{
-  metalEnabled = GetStaticBoolean(env, flagsClass, "metalEnabled");
-#ifdef METAL_DEBUG
-  fprintf(stderr, "metalEnabled=%d\n", metalEnabled);
-#endif
 }
