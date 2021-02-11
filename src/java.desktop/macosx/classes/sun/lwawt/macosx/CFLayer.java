@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,9 @@ package sun.lwawt.macosx;
 import sun.java2d.SurfaceData;
 import sun.java2d.NullSurfaceData;
 
+/**
+ * Common layer class between OpenGl and Metal.
+ */
 public abstract class CFLayer extends CFRetainedResource {
     protected SurfaceData surfaceData; // represents intermediate buffer (texture)
 
